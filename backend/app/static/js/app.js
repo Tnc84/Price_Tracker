@@ -131,28 +131,43 @@
 
         return `
             <div class="price-card">
-                <div class="price-card-header">
-                    <span class="retailer-name">${priceData.retailer}</span>
-                    <span class="availability-badge ${priceData.availability ? 'in-stock' : 'out-of-stock'}">
-                        ${priceData.availability ? 'In Stock' : 'Out of Stock'}
-                    </span>
-                </div>
-                <div class="price-info">
-                    <div>
-                        <span class="current-price">${formatPrice(priceData.price)}</span>
-                        ${priceData.original_price && priceData.original_price > priceData.price
-                            ? `<span class="original-price">${formatPrice(priceData.original_price)}</span>`
-                            : ''}
+                ${priceData.image_url 
+                    ? `<div class="product-image-container">
+                        <img src="${priceData.image_url}" alt="Product image" class="product-image" onerror="this.style.display='none'; this.parentElement.querySelector('.image-placeholder').style.display='flex';">
+                        <div class="image-placeholder" style="display: none;">
+                            <span>No Image</span>
+                        </div>
+                    </div>`
+                    : `<div class="product-image-container">
+                        <div class="image-placeholder">
+                            <span>No Image</span>
+                        </div>
+                    </div>`
+                }
+                <div class="price-card-content">
+                    <div class="price-card-header">
+                        <span class="retailer-name">${priceData.retailer}</span>
+                        <span class="availability-badge ${priceData.availability ? 'in-stock' : 'out-of-stock'}">
+                            ${priceData.availability ? 'In Stock' : 'Out of Stock'}
+                        </span>
                     </div>
-                    ${discount ? `<span class="promotion-badge">-${discount}% OFF</span>` : ''}
-                    ${priceData.promotion_text ? `<div class="promotion-text">${priceData.promotion_text}</div>` : ''}
-                    ${priceData.delivery_info ? `<div class="delivery-info">${priceData.delivery_info}</div>` : ''}
+                    <div class="price-info">
+                        <div class="price-row">
+                            <span class="current-price">${formatPrice(priceData.price)}</span>
+                            ${priceData.original_price && priceData.original_price > priceData.price
+                                ? `<span class="original-price">${formatPrice(priceData.original_price)}</span>`
+                                : ''}
+                        </div>
+                        ${discount ? `<span class="promotion-badge">-${discount}% OFF</span>` : ''}
+                        ${priceData.promotion_text ? `<div class="promotion-text">${priceData.promotion_text}</div>` : ''}
+                        ${priceData.delivery_info ? `<div class="delivery-info">${priceData.delivery_info}</div>` : ''}
+                    </div>
+                    ${priceData.url && priceData.availability
+                        ? `<a href="${priceData.url}" target="_blank" rel="noopener noreferrer" class="product-link">Buy Now</a>`
+                        : priceData.url
+                            ? `<a href="${priceData.url}" target="_blank" rel="noopener noreferrer" class="product-link" style="background: var(--text-secondary);">View Product</a>`
+                            : '<div class="product-link" style="background: var(--text-secondary); cursor: not-allowed;">Link Not Available</div>'}
                 </div>
-                ${priceData.url && priceData.availability
-                    ? `<a href="${priceData.url}" target="_blank" rel="noopener noreferrer" class="product-link">Buy Now</a>`
-                    : priceData.url
-                        ? `<a href="${priceData.url}" target="_blank" rel="noopener noreferrer" class="product-link" style="background: var(--text-secondary);">View Product</a>`
-                        : '<div class="product-link" style="background: var(--text-secondary); cursor: not-allowed;">Link Not Available</div>'}
             </div>
         `;
     }

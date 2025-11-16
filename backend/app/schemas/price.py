@@ -15,6 +15,7 @@ class PriceBase(BaseModel):
     availability: bool = True
     stock_status: Optional[str] = Field(None, max_length=50)
     url: Optional[str] = Field(None, max_length=2000, description="Product URL")
+    image_url: Optional[str] = Field(None, max_length=2000, description="Product image URL")
     is_promotional: bool = False
     promotion_text: Optional[str] = Field(None, max_length=500)
     delivery_info: Optional[str] = Field(None, max_length=200)

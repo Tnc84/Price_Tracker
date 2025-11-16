@@ -230,6 +230,38 @@ class EmagScraper(BaseScraper):
             if delivery_elem:
                 delivery_info = self._clean_text(delivery_elem.get_text())
             
+            # Extract product image - try multiple strategies
+            image_url = None
+            img_elem = None
+            
+            # Strategy 1: Look for img with product image classes
+            img_elem = element.find('img', class_=re.compile(r'product|thumbnail|card-image'))
+            if not img_elem:
+                # Strategy 2: Look for any img in the element
+                img_elem = element.find('img')
+            
+            if img_elem:
+                # Try multiple attributes for lazy loading
+                image_url = (img_elem.get('src') or 
+                           img_elem.get('data-src') or 
+                           img_elem.get('data-lazy-src') or
+                           img_elem.get('data-original') or
+                           img_elem.get('data-image'))
+                
+                if image_url:
+                    # Handle relative URLs
+                    if image_url.startswith('//'):
+                        image_url = f"https:{image_url}"
+                    elif image_url.startswith('/'):
+                        image_url = f"{self.BASE_URL}{image_url}"
+                    
+                    # Clean up the URL - remove resize parameters but keep essential parts
+                    if '?' in image_url:
+                        # eMAG uses resize parameters, try to get better quality
+                        base_url = image_url.split('?')[0]
+                        # Keep the base URL for better image quality
+                        image_url = base_url
+            
             return PriceCreate(
                 product_id=0,  # Will be set by service
                 retailer="eMAG",
@@ -239,6 +271,7 @@ class EmagScraper(BaseScraper):
                 availability=availability,
                 stock_status=stock_status,
                 url=product_url,
+                image_url=image_url,
                 is_promotional=is_promotional,
                 promotion_text=promotion_text,
                 delivery_info=delivery_info
