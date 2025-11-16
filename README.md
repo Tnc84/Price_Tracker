@@ -1,12 +1,12 @@
 # 🛒 Romanian Price Tracker
 
-A comprehensive price comparison application for Romanian retailers including eMAG, Altex, Carrefour, Kaufland, Selgros, and more.
+A comprehensive price comparison application for Romanian retailers with a simple web interface to find the best prices across multiple retailers.
 
 ## 🏗️ Architecture
 
 - **Backend**: Python 3.11 + FastAPI
 - **Frontend**: Web UI (HTML/CSS/JavaScript) - served by FastAPI
-- **Mobile**: Kotlin + Jetpack Compose (Android)
+- **Mobile**: Kotlin + Jetpack Compose (Android) - *In development*
 - **Database**: PostgreSQL
 - **Cache**: Redis
 - **Task Queue**: Celery
@@ -18,26 +18,24 @@ A comprehensive price comparison application for Romanian retailers including eM
 - **Carrefour** - https://www.carrefour.ro ⏸️ (Temporarily disabled)
 - **Kaufland** - https://www.kaufland.ro ⏸️ (Temporarily disabled)
 - **Selgros** - https://www.selgros.ro ⏸️ (Temporarily disabled)
-- **Auchan** - https://www.auchan.ro (Not implemented)
-- **Flanco** - https://www.flanco.ro (Not implemented)
-- **Dedeman** - https://www.dedeman.ro (Not implemented)
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.11+
 - Docker & Docker Compose
-- Android Studio (for mobile development)
+- (Optional) Python 3.11+ for local development
 
-### Start Backend & Frontend
+### Start with Docker (Recommended)
 ```bash
 # Start all services (backend, database, redis)
 docker-compose up -d
 
 # Access the web UI at http://localhost:8000
 # API documentation at http://localhost:8000/docs
+```
 
-# Or run locally
+### Run Locally (Development)
+```bash
 cd backend
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
@@ -47,21 +45,26 @@ uvicorn app.main:app --reload
 # Access the web UI at http://localhost:8000
 ```
 
-### Start Mobile Development
-```bash
-cd mobile
-# Open in Android Studio
-```
+### Using the Web Interface
+1. Open http://localhost:8000 in your browser
+2. Enter a product name (e.g., "cafea lavazza", "mancare caini")
+3. Click "Search Now"
+4. View the top 3 best prices with direct links to purchase
 
 ## 📁 Project Structure
 
 ```
 Promotion_Search/
-├── backend/          # Python FastAPI Backend
-├── mobile/           # Kotlin Android App
-├── database/         # Database migrations
-├── docs/            # Documentation
-└── docker-compose.yml
+├── backend/              # Python FastAPI Backend
+│   ├── app/
+│   │   ├── static/       # Web UI (HTML, CSS, JavaScript)
+│   │   ├── scrapers/     # Web scrapers for retailers
+│   │   ├── routers/      # API endpoints
+│   │   ├── services/     # Business logic
+│   │   └── models/       # Database models
+│   └── requirements.txt
+├── mobile/               # Kotlin Android App (in development)
+└── docker-compose.yml    # Docker configuration
 ```
 
 ## 🔧 Configuration
@@ -75,13 +78,19 @@ REDIS_URL=redis://localhost:6379/0
 
 ## 📱 Features
 
-- 🌐 **Web UI**: Simple search interface to find best prices
-- 🔍 Search products across retailers (currently eMAG)
-- 💰 Real-time price comparison
+### Current Features
+- 🌐 **Web UI**: Simple, modern search interface
+- 🔍 **Product Search**: Search across Romanian retailers (eMAG active)
+- 💰 **Price Comparison**: Get top 3 best prices instantly
+- 🔗 **Direct Links**: Click to buy directly from retailer
+- 📊 **Real-time Results**: Live scraping for current prices
+
+### Planned Features
 - 📊 Price history and trends
 - 🔔 Price drop alerts
 - 🎯 Target price notifications
-- 🏪 Multi-retailer support (other retailers temporarily disabled)
+- 🏪 Multi-retailer support (Altex, Carrefour, Kaufland, Selgros)
+- 📱 Mobile app (Android)
 
 ## 🤝 Contributing
 
