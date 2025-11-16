@@ -173,62 +173,120 @@
     }
 
     /**
-     * Display search results
+     * Display search results for multiple products
      */
-    function displayResults(apiResponse) {
-        const topPrices = processResults(apiResponse);
-        const retailerStatus = apiResponse.retailer_status || {};
-
-        if (topPrices.length === 0) {
-            resultsContainer.innerHTML = '<div class="no-results">No prices found for this product. Try a different search term.</div>';
-            resultsTitle.textContent = `No results for "${apiResponse.query}"`;
-        } else {
-            resultsTitle.textContent = `Top ${topPrices.length} Best Offers (Different Products) for "${apiResponse.query}"`;
-            resultsContainer.innerHTML = topPrices.map((price, index) => 
-                createPriceCard(price, index)
-            ).join('');
+    function displayResults(allResults) {
+        if (allResults.length === 0) {
+            resultsContainer.innerHTML = '<div class="no-results">No prices found for any products. Try a different search term.</div>';
+            resultsTitle.textContent = 'No results found';
+            resultsDiv.classList.remove('hidden');
+            return;
         }
 
-        // Add retailer status information
-        const searchedRetailers = Object.keys(retailerStatus);
-        const successfulRetailers = searchedRetailers.filter(r => retailerStatus[r].success);
-        const failedRetailers = searchedRetailers.filter(r => !retailerStatus[r].success);
+        // Group results by product query
+        const groupedResults = {};
+        allResults.forEach(result => {
+            const query = result.query;
+            if (!groupedResults[query]) {
+                groupedResults[query] = {
+                    query: query,
+                    topPrices: processResults(result),
+                    retailerStatus: result.retailer_status || {}
+                };
+            }
+        });
 
-        if (failedRetailers.length > 0) {
-            const statusInfo = document.createElement('div');
-            statusInfo.className = 'retailer-status';
-            statusInfo.innerHTML = `
-                <p class="status-info">
-                    <strong>Searched:</strong> ${searchedRetailers.join(', ')} | 
-                    <strong>Found results:</strong> ${successfulRetailers.join(', ') || 'None'} | 
-                    <strong>No results:</strong> ${failedRetailers.join(', ') || 'None'}
-                </p>
-            `;
-            resultsContainer.insertBefore(statusInfo, resultsContainer.firstChild);
-        }
+        // Build HTML for each product row
+        let html = '';
+        Object.values(groupedResults).forEach((group, groupIndex) => {
+            const { query, topPrices, retailerStatus } = group;
+            
+            if (topPrices.length === 0) {
+                html += `
+                    <div class="product-row">
+                        <h3 class="product-row-title">${query}</h3>
+                        <div class="no-results-small">No prices found for this product</div>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="product-row">
+                        <h3 class="product-row-title">${query}</h3>
+                        <div class="product-row-cards">
+                            ${topPrices.map((price, index) => createPriceCard(price, index)).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+        });
 
+        resultsTitle.textContent = `Search Results (${allResults.length} product${allResults.length > 1 ? 's' : ''})`;
+        resultsContainer.innerHTML = html;
         resultsDiv.classList.remove('hidden');
     }
 
     /**
-     * Search for products
+     * Parse multiple products from search input
+     * Supports comma, period, or slash as separators
      */
-    async function searchProduct(productName) {
+    function parseProducts(searchInput) {
+        // Split by comma, period, or slash
+        const products = searchInput
+            .split(/[,.\/]/)
+            .map(p => p.trim())
+            .filter(p => p.length >= 2); // Minimum 2 characters
+        
+        // Limit to 5 products
+        return products.slice(0, 5);
+    }
+
+    /**
+     * Search for multiple products
+     */
+    async function searchProduct(searchInput) {
         try {
             showLoading();
 
-            const response = await fetch(
-                `${API_BASE}/scraper/search?product_name=${encodeURIComponent(productName)}`
-            );
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+            // Parse multiple products
+            const products = parseProducts(searchInput);
+            
+            if (products.length === 0) {
+                hideLoading();
+                showError('Please enter at least one product name (minimum 2 characters)');
+                return;
             }
 
-            const data = await response.json();
+            if (products.length > 5) {
+                hideLoading();
+                showError('Maximum 5 products allowed. Using first 5 products.');
+            }
+
+            console.log(`Searching for ${products.length} products:`, products);
+
+            // Search all products in parallel
+            const searchPromises = products.map(productName =>
+                fetch(`${API_BASE}/scraper/search?product_name=${encodeURIComponent(productName)}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            const errorData = response.json().catch(() => ({}));
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .catch(error => {
+                        console.error(`Error searching for "${productName}":`, error);
+                        return {
+                            query: productName,
+                            total_prices_found: 0,
+                            results: {},
+                            retailer_status: {}
+                        };
+                    })
+            );
+
+            const allResults = await Promise.all(searchPromises);
             hideLoading();
-            displayResults(data);
+            displayResults(allResults);
 
         } catch (error) {
             hideLoading();
