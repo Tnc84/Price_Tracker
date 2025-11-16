@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     
     # API
     api_prefix: str = "/api/v1"
-    cors_origins: List[str] = ["http://localhost:3000", "http://localhost:8080"]
+    cors_origins: List[str] = ["http://localhost:3000", "http://localhost:8080", "http://localhost:8000"]
     
     # Romanian locale
     currency: str = "RON"

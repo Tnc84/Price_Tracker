@@ -41,12 +41,21 @@ async def search_product(
     service = ScraperService()
     results = await service.search_all_retailers(product_name, retailers=retailers)
     
-    # Format response
+    # Format response with retailer status information
     total_found = sum(len(prices) for prices in results.values())
+    retailer_status = {
+        retailer: {
+            "searched": True,
+            "prices_found": len(prices),
+            "success": len(prices) > 0
+        }
+        for retailer, prices in results.items()
+    }
     
     return {
         "query": product_name,
         "total_prices_found": total_found,
-        "results": results
+        "results": results,
+        "retailer_status": retailer_status
     }
 

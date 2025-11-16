@@ -43,21 +43,37 @@ class EmagScraper(BaseScraper):
             
         soup = BeautifulSoup(html, 'lxml')
         
-        # Find product cards
-        # eMAG uses card-v2 or card-item classes
-        products = soup.find_all('div', class_=re.compile(r'card-item|card-v2'))
+        # Find product cards - try multiple selectors for eMAG
+        # eMAG uses various class names: card-item, card-v2, card-body, etc.
+        products = soup.find_all('div', class_=re.compile(r'card-item|card-v2|card-body|product-item'))
         
-        logger.info(f"Found {len(products)} products on eMAG for '{product_name}'")
+        # If no products found with those selectors, try alternative approach
+        if not products:
+            # Try finding by data attributes or other patterns
+            products = soup.find_all('div', {'data-product-id': True})
         
-        for product in products[:15]:  # Limit to first 15 results
+        logger.info(f"Found {len(products)} product elements on eMAG for '{product_name}'")
+        
+        seen_urls = set()  # Track URLs to avoid duplicates
+        extracted_count = 0
+        
+        for product in products[:20]:  # Increased limit to 20 to get more variety
             try:
                 price_data = self._extract_product_data(product)
-                if price_data:
-                    prices.append(price_data)
+                if price_data and price_data.url:
+                    # Only add if we haven't seen this URL before
+                    if price_data.url not in seen_urls:
+                        seen_urls.add(price_data.url)
+                        prices.append(price_data)
+                        extracted_count += 1
+                        logger.debug(f"Extracted product {extracted_count}: {price_data.url} - {price_data.price} RON")
+                    else:
+                        logger.debug(f"Skipping duplicate URL: {price_data.url}")
             except Exception as e:
-                logger.error(f"Error extracting eMAG product data: {e}")
+                logger.debug(f"Error extracting eMAG product data: {e}")
                 continue
-                
+        
+        logger.info(f"Successfully extracted {extracted_count} unique products from {len(products)} product elements")
         return prices
     
     async def get_product_price(self, product_url: str) -> Optional[PriceCreate]:
@@ -72,8 +88,16 @@ class EmagScraper(BaseScraper):
     def _extract_product_data(self, element) -> Optional[PriceCreate]:
         """Extract product data from search result card"""
         try:
-            # Product name
-            name_elem = element.find('a', class_=re.compile(r'card-v2-title|product-title'))
+            # Product name and URL - try multiple selectors
+            name_elem = element.find('a', class_=re.compile(r'card-v2-title|product-title|title'))
+            if not name_elem:
+                # Try alternative: look for any link with href containing /p/
+                name_elem = element.find('a', href=re.compile(r'/p/'))
+            
+            if not name_elem:
+                # Try finding by data attributes
+                name_elem = element.find('a', {'data-product-id': True})
+            
             if not name_elem:
                 return None
             
@@ -81,11 +105,23 @@ class EmagScraper(BaseScraper):
             
             # Product URL
             product_url = name_elem.get('href', '')
+            if not product_url:
+                # Try data-href or other attributes
+                product_url = name_elem.get('data-href', '')
+            
             if product_url and not product_url.startswith('http'):
                 product_url = f"{self.BASE_URL}{product_url}"
             
-            # Price extraction
-            price_elem = element.find('p', class_=re.compile(r'product-new-price'))
+            if not product_url:
+                return None
+            
+            # Price extraction - try multiple selectors
+            price_elem = element.find('p', class_=re.compile(r'product-new-price|price-new|new-price'))
+            if not price_elem:
+                price_elem = element.find('span', class_=re.compile(r'product-new-price|price-new'))
+            if not price_elem:
+                price_elem = element.find('div', class_=re.compile(r'product-new-price|price-new'))
+            
             if not price_elem:
                 return None
             

@@ -5,6 +5,7 @@ A comprehensive price comparison application for Romanian retailers including eM
 ## 🏗️ Architecture
 
 - **Backend**: Python 3.11 + FastAPI
+- **Frontend**: Web UI (HTML/CSS/JavaScript) - served by FastAPI
 - **Mobile**: Kotlin + Jetpack Compose (Android)
 - **Database**: PostgreSQL
 - **Cache**: Redis
@@ -12,14 +13,14 @@ A comprehensive price comparison application for Romanian retailers including eM
 
 ## 🏪 Supported Romanian Retailers
 
-- **eMAG** - https://www.emag.ro
-- **Altex** - https://www.altex.ro
-- **Carrefour** - https://www.carrefour.ro
-- **Kaufland** - https://www.kaufland.ro
-- **Selgros** - https://www.selgros.ro
-- **Auchan** - https://www.auchan.ro
-- **Flanco** - https://www.flanco.ro
-- **Dedeman** - https://www.dedeman.ro
+- **eMAG** - https://www.emag.ro ✅ (Active)
+- **Altex** - https://www.altex.ro ⏸️ (Temporarily disabled)
+- **Carrefour** - https://www.carrefour.ro ⏸️ (Temporarily disabled)
+- **Kaufland** - https://www.kaufland.ro ⏸️ (Temporarily disabled)
+- **Selgros** - https://www.selgros.ro ⏸️ (Temporarily disabled)
+- **Auchan** - https://www.auchan.ro (Not implemented)
+- **Flanco** - https://www.flanco.ro (Not implemented)
+- **Dedeman** - https://www.dedeman.ro (Not implemented)
 
 ## 🚀 Quick Start
 
@@ -28,10 +29,13 @@ A comprehensive price comparison application for Romanian retailers including eM
 - Docker & Docker Compose
 - Android Studio (for mobile development)
 
-### Start Backend
+### Start Backend & Frontend
 ```bash
-# Start all services
+# Start all services (backend, database, redis)
 docker-compose up -d
+
+# Access the web UI at http://localhost:8000
+# API documentation at http://localhost:8000/docs
 
 # Or run locally
 cd backend
@@ -39,6 +43,8 @@ python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
+
+# Access the web UI at http://localhost:8000
 ```
 
 ### Start Mobile Development
@@ -69,12 +75,13 @@ REDIS_URL=redis://localhost:6379/0
 
 ## 📱 Features
 
-- 🔍 Search products across multiple retailers
+- 🌐 **Web UI**: Simple search interface to find best prices
+- 🔍 Search products across retailers (currently eMAG)
 - 💰 Real-time price comparison
 - 📊 Price history and trends
 - 🔔 Price drop alerts
 - 🎯 Target price notifications
-- 🏪 Multi-retailer support
+- 🏪 Multi-retailer support (other retailers temporarily disabled)
 
 ## 🤝 Contributing
 

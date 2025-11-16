@@ -32,7 +32,8 @@ class BaseScraper(ABC):
         
     async def __aenter__(self):
         """Async context manager entry"""
-        timeout = aiohttp.ClientTimeout(total=60, connect=10)
+        # Increased timeout for slow retailers (some take 60+ seconds)
+        timeout = aiohttp.ClientTimeout(total=120, connect=30)
         self.session = aiohttp.ClientSession(
             headers=self._get_headers(),
             timeout=timeout
@@ -122,7 +123,10 @@ class BaseScraper(ABC):
                 details=str(e)
             )
         except Exception as e:
-            logger.error(f"Unexpected error for {url}: {e}")
+            import traceback
+            error_details = traceback.format_exc()
+            logger.error(f"Unexpected error for {url}: {type(e).__name__}: {str(e)}")
+            logger.debug(f"Full traceback:\n{error_details}")
             return None
     
     def _parse_price(self, price_text: str) -> Optional[float]:

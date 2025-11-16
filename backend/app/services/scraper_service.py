@@ -4,10 +4,10 @@ from typing import List, Dict
 import asyncio
 from app.scrapers import (
     EmagScraper,
-    AltexScraper,
-    CarrefourScraper,
-    KauflandScraper,
-    SelgrosScraper
+    # AltexScraper,
+    # CarrefourScraper,
+    # KauflandScraper,
+    # SelgrosScraper
 )
 from app.schemas.price import PriceCreate
 from app.core.config import settings
@@ -29,10 +29,10 @@ class ScraperService:
     def __init__(self):
         self.scrapers = {
             "emag": EmagScraper,
-            "altex": AltexScraper,
-            "carrefour": CarrefourScraper,
-            "kaufland": KauflandScraper,
-            "selgros": SelgrosScraper
+            # "altex": AltexScraper,
+            # "carrefour": CarrefourScraper,
+            # "kaufland": KauflandScraper,
+            # "selgros": SelgrosScraper
         }
     
     async def search_all_retailers(
@@ -64,17 +64,21 @@ class ScraperService:
         
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
-        # Combine results
+        # Combine results with detailed error logging
         all_results = {}
         for i, retailer in enumerate(retailers):
             if isinstance(results[i], Exception):
-                logger.error(f"Error scraping {retailer}: {results[i]}")
+                error_msg = str(results[i])
+                logger.error(f"Error scraping {retailer}: {error_msg}", exc_info=results[i])
                 all_results[retailer] = []
             else:
                 all_results[retailer] = results[i]
+                if len(all_results[retailer]) == 0:
+                    logger.warning(f"No results found for {retailer} - scraper returned empty list")
         
         total_prices = sum(len(prices) for prices in all_results.values())
-        logger.info(f"Found {total_prices} total prices across all retailers")
+        retailers_with_results = [r for r, prices in all_results.items() if len(prices) > 0]
+        logger.info(f"Found {total_prices} total prices across all retailers. Retailers with results: {retailers_with_results}")
         
         return all_results
     
