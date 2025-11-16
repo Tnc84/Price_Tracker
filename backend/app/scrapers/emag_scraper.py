@@ -52,12 +52,21 @@ class EmagScraper(BaseScraper):
             # Try finding by data attributes or other patterns
             products = soup.find_all('div', {'data-product-id': True})
         
+        # If still no products, try finding any div with a product link inside
+        if not products:
+            # Look for divs containing links with /p/ in href
+            all_divs = soup.find_all('div')
+            products = [div for div in all_divs if div.find('a', href=re.compile(r'/p/'))]
+        
         logger.info(f"Found {len(products)} product elements on eMAG for '{product_name}'")
         
         seen_urls = set()  # Track URLs to avoid duplicates
         extracted_count = 0
         
-        for product in products[:20]:  # Increased limit to 20 to get more variety
+        # Process more products to ensure we get at least 3 different ones
+        failed_extractions = 0
+        # Increase to 50 to ensure we get at least 3 valid products
+        for idx, product in enumerate(products[:50]):
             try:
                 price_data = self._extract_product_data(product)
                 if price_data and price_data.url:
@@ -66,12 +75,29 @@ class EmagScraper(BaseScraper):
                         seen_urls.add(price_data.url)
                         prices.append(price_data)
                         extracted_count += 1
-                        logger.debug(f"Extracted product {extracted_count}: {price_data.url} - {price_data.price} RON")
+                        logger.info(f"Extracted product {extracted_count}: {price_data.url} - {price_data.price} RON")
+                        
+                        # Stop early if we have enough unique products
+                        if extracted_count >= 5:  # Get at least 5 to ensure top 3 selection
+                            logger.info(f"Reached target of {extracted_count} products, stopping early")
+                            break
                     else:
                         logger.debug(f"Skipping duplicate URL: {price_data.url}")
+                else:
+                    failed_extractions += 1
+                    if idx < 10:  # Log first 10 failures for debugging
+                        logger.debug(f"Failed to extract product {idx + 1}: No valid data returned")
             except Exception as e:
-                logger.debug(f"Error extracting eMAG product data: {e}")
+                failed_extractions += 1
+                if idx < 10:  # Log first 10 failures for debugging
+                    logger.warning(f"Error extracting eMAG product {idx + 1}: {str(e)}")
                 continue
+        
+        if failed_extractions > 0:
+            logger.warning(f"Failed to extract {failed_extractions} out of {min(50, len(products))} products - selectors may need updating")
+        
+        if extracted_count < 3:
+            logger.error(f"Only extracted {extracted_count} products, expected at least 3. HTML structure may have changed.")
         
         logger.info(f"Successfully extracted {extracted_count} unique products from {len(products)} product elements")
         return prices
@@ -89,14 +115,29 @@ class EmagScraper(BaseScraper):
         """Extract product data from search result card"""
         try:
             # Product name and URL - try multiple selectors
-            name_elem = element.find('a', class_=re.compile(r'card-v2-title|product-title|title'))
-            if not name_elem:
-                # Try alternative: look for any link with href containing /p/
-                name_elem = element.find('a', href=re.compile(r'/p/'))
+            # eMAG uses various structures, try all common patterns
+            name_elem = None
             
+            # Strategy 1: Look for links with product URLs (most reliable)
+            all_links = element.find_all('a', href=True)
+            for link in all_links:
+                href = link.get('href', '')
+                # eMAG product URLs typically contain /p/ or /product/
+                if '/p/' in href or '/product/' in href or 'emag.ro' in href:
+                    name_elem = link
+                    break
+            
+            # Strategy 2: Try class-based selectors
             if not name_elem:
-                # Try finding by data attributes
+                name_elem = element.find('a', class_=re.compile(r'card-v2-title|product-title|title|product-name'))
+            
+            # Strategy 3: Try data attributes
+            if not name_elem:
                 name_elem = element.find('a', {'data-product-id': True})
+            
+            # Strategy 4: Look for any link in the element
+            if not name_elem:
+                name_elem = element.find('a', href=True)
             
             if not name_elem:
                 return None
@@ -115,12 +156,39 @@ class EmagScraper(BaseScraper):
             if not product_url:
                 return None
             
-            # Price extraction - try multiple selectors
-            price_elem = element.find('p', class_=re.compile(r'product-new-price|price-new|new-price'))
+            # Price extraction - try multiple selectors and strategies
+            price_elem = None
+            
+            # Strategy 1: Look for price in common class names
+            price_elem = element.find('p', class_=re.compile(r'product-new-price|price-new|new-price|product-price'))
             if not price_elem:
-                price_elem = element.find('span', class_=re.compile(r'product-new-price|price-new'))
+                price_elem = element.find('span', class_=re.compile(r'product-new-price|price-new|new-price|product-price'))
             if not price_elem:
-                price_elem = element.find('div', class_=re.compile(r'product-new-price|price-new'))
+                price_elem = element.find('div', class_=re.compile(r'product-new-price|price-new|new-price|product-price'))
+            
+            # Strategy 2: Look for price patterns in text (contains "RON" or "lei")
+            if not price_elem:
+                all_text_elements = element.find_all(['p', 'span', 'div'])
+                for elem in all_text_elements:
+                    text = elem.get_text().strip()
+                    # Look for price patterns like "77,99 RON" or "77.99 lei"
+                    if re.search(r'\d+[.,]\d+\s*(RON|lei|LEI)', text, re.IGNORECASE):
+                        price_elem = elem
+                        break
+            
+            # Strategy 3: Look for any element containing price-like patterns
+            if not price_elem:
+                price_pattern = re.compile(r'\d+[.,]\d+')
+                for tag in ['p', 'span', 'div', 'strong', 'b']:
+                    for elem in element.find_all(tag):
+                        text = elem.get_text().strip()
+                        if price_pattern.search(text) and len(text) < 50:  # Price text is usually short
+                            # Check if it looks like a price (has decimal separator)
+                            if ',' in text or '.' in text:
+                                price_elem = elem
+                                break
+                    if price_elem:
+                        break
             
             if not price_elem:
                 return None

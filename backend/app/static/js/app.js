@@ -118,9 +118,15 @@
         uniquePrices.sort((a, b) => a.price - b.price);
 
         // Return top 3 best prices from different products
-        // If we have fewer than 3 unique products, return what we have
+        // Ensure we have at least 3 different products
         const maxResults = Math.min(3, uniquePrices.length);
-        const result = uniquePrices.slice(0, maxResults);
+        let result = uniquePrices.slice(0, maxResults);
+        
+        // If we have fewer than 3, try to get more by looking at next best prices
+        // This ensures we show 3 different products if available
+        if (result.length < 3 && uniquePrices.length >= 3) {
+            result = uniquePrices.slice(0, 3);
+        }
         
         console.log(`Total prices: ${allPrices.length}, Unique products: ${uniqueProducts.size}, Returning: ${result.length}`);
         console.log('Result URLs:', result.map(r => r.url));
