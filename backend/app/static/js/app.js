@@ -83,27 +83,22 @@
 
         console.log(`Total prices found: ${allPrices.length}`);
 
-        // Group by unique product (using normalized URL as identifier)
+        // Group by unique product (using URL as identifier)
         const uniqueProducts = new Map();
         
         allPrices.forEach((price, index) => {
             // Use full URL as identifier to differentiate products
-            // Even if URLs are similar, they might be different product variants
             let productKey;
             if (price.url) {
-                // Use full URL to catch different product variants
                 productKey = price.url;
             } else {
-                // Fallback: use retailer, price, and index to ensure uniqueness
                 productKey = `${price.retailer}-${price.price}-${index}`;
             }
             
             // If we already have this exact URL, keep the one with lower price
             if (!uniqueProducts.has(productKey)) {
-                // First time seeing this product - add it
                 uniqueProducts.set(productKey, price);
             } else {
-                // Product already exists - keep the one with lower price
                 const existing = uniqueProducts.get(productKey);
                 if (price.price < existing.price) {
                     uniqueProducts.set(productKey, price);
@@ -118,15 +113,7 @@
         uniquePrices.sort((a, b) => a.price - b.price);
 
         // Return top 3 best prices from different products
-        // Ensure we have at least 3 different products
-        const maxResults = Math.min(3, uniquePrices.length);
-        let result = uniquePrices.slice(0, maxResults);
-        
-        // If we have fewer than 3, try to get more by looking at next best prices
-        // This ensures we show 3 different products if available
-        if (result.length < 3 && uniquePrices.length >= 3) {
-            result = uniquePrices.slice(0, 3);
-        }
+        const result = uniquePrices.slice(0, 3);
         
         console.log(`Total prices: ${allPrices.length}, Unique products: ${uniqueProducts.size}, Returning: ${result.length}`);
         console.log('Result URLs:', result.map(r => r.url));
